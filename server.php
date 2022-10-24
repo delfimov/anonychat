@@ -14,14 +14,14 @@ $users = [];
 
 $context = [
     /*'ssl' => [
-        'local_cert'  => Config::get('local_cert'),
-        'local_pk'    => Config::get('local_pk'),
+        'local_cert'  => __DIR__ . '/var/certificates/' . Config::get('local_cert'),
+        'local_pk'    => __DIR__ . '/var/certificates/' . Config::get('local_pk'),
         'verify_peer' => false,
     ]*/
 ];
 $websocket = new Worker('websocket://' . Config::get('server') . ':' . Config::get('port'), $context);
 $users = new Users();
-$rooms = new Rooms($users);
+$rooms = new Rooms();
 
 $websocket->onConnect = function($connection) use ($users, $rooms)
 {

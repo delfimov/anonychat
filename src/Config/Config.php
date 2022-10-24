@@ -5,8 +5,8 @@ namespace AnonyChat\Config;
 class Config
 {
     const CONFIG = [
-        'local_cert' => __DIR__ . '/fullchain.pem',
-        'local_pk' => __DIR__ . '/privkey.pem',
+        'local_cert' => 'fullchain.pem',
+        'local_pk' => 'privkey.pem',
         'port' => '9888',
         'server' => 'localhost',
     ];
