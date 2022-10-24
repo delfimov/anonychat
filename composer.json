@@ -1,0 +1,13 @@
+{
+    "require": {
+        "php": ">=7.4",
+        "workerman/workerman": "^4.1",
+        "ext-random": "*",
+        "ext-ctype": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "AnonyChat\\": "./src"
+        }
+    }
+}
