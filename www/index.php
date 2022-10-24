@@ -100,7 +100,7 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
 
     </main>
     <footer class="pt-5 my-5 text-muted border-top">
-        <a href="">t.me/AnonyChat</a> &middot; <a href="https://github.com/AnonyChat/AnonyChat">github.com/AnonyChat</a> &copy; 2022
+        <!--<a href="">t.me/AnonyChat</a> &middot; --><a href="https://github.com/delfimov/anonychat">github.com/delfimov/anonychat</a> &copy; 2022
     </footer>
 </div>
 
