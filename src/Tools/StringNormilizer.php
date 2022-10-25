@@ -29,9 +29,10 @@ class StringNormilizer
         return '#' . $string;
     }
 
-    public static function text($string)
+    public static function text($string, $maxLength = 1024)
     {
         $string = htmlspecialchars($string);
+        $string = mb_substr($string, 0, $maxLength);
         return $string;
     }
 }

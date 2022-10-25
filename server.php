@@ -1,7 +1,6 @@
 <?php
 
 use Workerman\Worker;
-use AnonyChat\Config\Config;
 use AnonyChat\Tools\StringNormilizer;
 use AnonyChat\Server\Send;
 use AnonyChat\Server\Users;
@@ -12,14 +11,17 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 $users = [];
 
+$config = require_once __DIR__ . '/config/config.php';
+
 $context = [
-    /*'ssl' => [
-        'local_cert'  => __DIR__ . '/var/certificates/' . Config::get('local_cert'),
-        'local_pk'    => __DIR__ . '/var/certificates/' . Config::get('local_pk'),
+    'ssl' => [
+        'local_cert'  => __DIR__ . '/var/certificates/' . $config['local_cert'],
+        'local_pk'    => __DIR__ . '/var/certificates/' . $config['local_pk'],
         'verify_peer' => false,
-    ]*/
+    ]
 ];
-$websocket = new Worker('websocket://' . Config::get('server') . ':' . Config::get('port'), $context);
+$websocket = new Worker('websocket://' . $config['server_name'] . ':' . $config['port'], $context);
+$websocket->transport = 'ssl';
 $users = new Users();
 $rooms = new Rooms();
 
@@ -58,16 +60,24 @@ $websocket->onMessage = function ($connection, $data) use ($users, $rooms) {
         $messageData = DecodeData::decode($data);
         $userName = $users->findByConnection($connection);
         $roomName = $rooms->findByUsername($userName);
-        if (!empty($messageData) && $roomName == $messageData['room']) { // do not allow users to post to another rooms
+        if (!empty($messageData)) { // do not allow users to post to another rooms
             $connections = $users->getConnectionsByUsernames($rooms->getUsers($roomName));
             switch ($messageData['type']) {
                 case 'text':
                     Send::text($userName, $connections, $roomName, $messageData['text']);
                     break;
-                case 'disconnect':
-                    $users->removeByConnection($connection);
-                    $rooms->removeByUsername($userName);
-                    Send::service($userName, $connections, $roomName, 'Disconnected user: ' . $userName);
+                case 'system':
+                    switch ($messageData['text']) {
+                        case 'keepalive':
+                            // TODO: Send chat data here
+                            Send::keepalive($userName, $connections, $roomName, '' . $userName);
+                            break;
+                        case 'disconnect':
+                            $users->removeByConnection($connection);
+                            $rooms->removeByUsername($userName);
+                            Send::service($userName, $connections, $roomName, 'Disconnected user: ' . $userName);
+                            break;
+                    }
                     break;
                 case 'color':
                     Send::color($userName, $connections, $roomName, $messageData['text']);

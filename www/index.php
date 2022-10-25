@@ -2,11 +2,11 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use AnonyChat\Config\Config;
+$config = require_once __DIR__ . '/../config/config.php';
 
 header('Content-Type: text/html; charset=utf-8');
 
-$wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
+$wsUri = 'wss://' . $config['server_name'] . ':' . $config['port'];
 
 ?><!doctype html>
 <html lang="en">
@@ -124,6 +124,8 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
   var messageField = document.getElementById("message-field");
   var autoconnectField = document.getElementById("autoconnect-checkbox");
 
+  var keepalive;
+
   var defaultUserColor = '#000';
   var usersColors = {};
 
@@ -154,6 +156,7 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
     }
     disconnectButton.addEventListener('click', (e) => {
       e.preventDefault();
+      websocket.send(JSON.stringify({type: 'system', text: 'disconnect'}));
       websocketDisconnect();
     });
     connectButton.addEventListener('click', (e) => {
@@ -189,6 +192,7 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
       messageBox.scrollTop = messageBox.scrollHeight; // scroll to the top
       mainWrapper.classList.remove('main_disconnected');
       mainWrapper.classList.add('main_connected');
+      keepalive = setInterval(function() {websocket.send(JSON.stringify({type: 'system', text: 'keepalive'}))}, 2000);
     }
     websocket.onerror = function(e) {
       showMessage({text: 'Ошибка ' + e.data, type: 'error'});
@@ -197,6 +201,7 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
     websocket.onclose = function(e) {
       mainWrapper.classList.add('main_disconnected');
       mainWrapper.classList.remove('main_connected');
+      clearInterval(keepalive);
       showMessage({text: 'Connection closed.', type: 'system'});
     };
     websocket.onmessage = function(e) {
@@ -207,6 +212,9 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
           break;
         case 'service':
           showMessage(response);
+          break;
+        case 'keepalive':
+          // keep alive
           break;
         case 'color':
           setUserColor(response);
@@ -235,8 +243,7 @@ $wsUri = 'ws://' . Config::get('server') . ':' . Config::get('port');
       // prepare json data
       var msg = {
         type: 'text',
-        text: messageField.value,
-        room: connectRoom.value
+        text: messageField.value
       };
       // convert and send data to server
       websocket.send(JSON.stringify(msg));

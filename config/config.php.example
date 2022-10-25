@@ -1,0 +1,9 @@
+<?php
+
+return [
+    'local_cert' => 'fullchain.pem',
+    'local_pk' => 'privkey.pem',
+    'port' => '9889',
+    'server' => 'localhost',
+    'max_message_length' => 4096,
+];

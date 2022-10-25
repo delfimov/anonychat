@@ -14,6 +14,11 @@ class Send
         self::send($userName, $userConnections, $room, $text, 'service');
     }
 
+    public static function keepalive($userName, $userConnections, $room, $text)
+    {
+        self::send($userName, $userConnections, $room, $text, 'keepalive');
+    }
+
     public static function color($userName, $userConnections, $room, $text)
     {
         self::send($userName, $userConnections, $room, $text, 'color');
