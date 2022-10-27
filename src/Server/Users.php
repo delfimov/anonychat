@@ -14,7 +14,7 @@ class Users
             $userName .= '_' . time();
         }
         $this->users[$userName] = $connection;
-        $this->usersTimeOutStorage[$userName] = time();
+        $this->timeOutStorage[$userName] = time();
     }
 
     public function getConnectionsByUsernames(array $userNames): array
@@ -46,13 +46,24 @@ class Users
         }
     }
 
-    public function clean()
+    public function removeByUsername($userName)
     {
-        foreach ($this->timeOutStorage as $userName => $time) {
-            if ($time + self::TIMEOUT > time()) {
+        if (isset($this->users[$userName])) {
+            unset($this->users[$userName]);
+        }
+    }
+
+    public function clean(array $userNames): array
+    {
+        $cleanUsers = [];
+        foreach ($userNames as $userName) {
+            $time = $this->timeOutStorage[$userName] ?? 0;
+            if ($time + self::TIMEOUT < time()) {
+                $cleanUsers[] = $userName;
                 unset($this->timeOutStorage[$userName]);
                 unset($this->users[$userName]);
             }
         }
+        return $cleanUsers;
     }
 }

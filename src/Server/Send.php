@@ -4,34 +4,24 @@ namespace AnonyChat\Server;
 
 class Send
 {
-    public static function text($userName, $userConnections, $room, $text)
-    {
-        self::send($userName, $userConnections, $room, $text, 'text');
-    }
-
-    public static function service($userName, $userConnections, $room, $text)
-    {
-        self::send($userName, $userConnections, $room, $text, 'service');
-    }
-
-    public static function keepalive($userName, $userConnections, $room, $text)
-    {
-        self::send($userName, $userConnections, $room, $text, 'keepalive');
-    }
-
-    public static function color($userName, $userConnections, $room, $text)
-    {
-        self::send($userName, $userConnections, $room, $text, 'color');
-    }
-
-    public static function send($userName, $userConnections, $room, $data, $type)
+    public static function system($userConnections, $data)
     {
         foreach ($userConnections as $connectionUserName => $userConnection) {
             $dataSend = json_encode([
-                'type' => $type,
+                'type' => 'system',
+                'data' => $data,
+            ]);
+            $userConnection->send($dataSend);
+        }
+    }
+
+    public static function text($userName, $userConnections, $text)
+    {
+        foreach ($userConnections as $connectionUserName => $userConnection) {
+            $dataSend = json_encode([
+                'type' => 'text',
                 'from' => $userName,
-                'room' => $room,
-                'text' => $data,
+                'text' => $text,
             ]);
             $userConnection->send($dataSend);
         }

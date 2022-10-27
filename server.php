@@ -6,6 +6,7 @@ use AnonyChat\Server\Send;
 use AnonyChat\Server\Users;
 use AnonyChat\Server\Rooms;
 use AnonyChat\Server\DecodeData;
+use AnonyChat\Server\Clean;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -13,15 +14,19 @@ $users = [];
 
 $config = require_once __DIR__ . '/config/config.php';
 
-$context = [
-    'ssl' => [
-        'local_cert'  => __DIR__ . '/var/certificates/' . $config['local_cert'],
-        'local_pk'    => __DIR__ . '/var/certificates/' . $config['local_pk'],
-        'verify_peer' => false,
-    ]
-];
-$websocket = new Worker('websocket://' . $config['server_name'] . ':' . $config['port'], $context);
-$websocket->transport = 'ssl';
+if ($config['protocol'] == 'wss') {
+    $context = [
+        'ssl' => [
+            'local_cert'  => __DIR__ . '/var/certificates/' . $config['local_cert'],
+            'local_pk'    => __DIR__ . '/var/certificates/' . $config['local_pk'],
+            'verify_peer' => false,
+        ]
+    ];
+    $websocket = new Worker('websocket://' . $config['server_name'] . ':' . $config['port'], $context);
+    $websocket->transport = 'ssl';
+} else {
+    $websocket = new Worker('websocket://' . $config['server_name'] . ':' . $config['port']);
+}
 $users = new Users();
 $rooms = new Rooms();
 
@@ -32,27 +37,53 @@ $websocket->onConnect = function($connection) use ($users, $rooms)
         $userName = StringNormilizer::name($_GET['user'] ?? 'user_' . bin2hex(random_bytes(10)));
         $roomName = StringNormilizer::room($_GET['room'] ?? '/');
         $color = StringNormilizer::hexcolor($_GET['color'] ?? '#000000');
-        $users->clean();
         $users->add($connection, $userName);
         $rooms->add($userName, $roomName);
+        $rooms->getRoomTimeout($roomName);
         $userNames = $rooms->getUsers($roomName);
         $connections = $users->getConnectionsByUsernames($userNames);
-        Send::service($userName, $connections, $roomName, 'New user: ' . $userName);
-        Send::color($userName, $connections, $roomName, $color);
+        Send::system([$connection], [
+            'user_name' => $userName,
+            'user_color' => ['user' => $userName, 'color' => $color],
+            'room_name' => $roomName,
+        ]);
+        Send::system($connections, [
+            'new_user' => $userName,
+            'user_color' => ['user' => $userName, 'color' => $color],
+            'room_users' => $userNames,
+            'room_timeout' => $rooms->getRoomTimeout($roomName),
+        ]);
     };
 };
 
 $websocket->onClose = function($connection) use ($users, $rooms)
 {
-    $users->clean();
     $userName = $users->findByConnection($connection);
-    $roomName = $rooms->findByUsername($userName);
-    $connections = $users->getConnectionsByUsernames($rooms->getUsers($roomName));
-    $users->removeByConnection($connection);
-    $rooms->removeByUsername($userName);
-    Send::service($userName, $connections, $roomName, 'Disconnected user: ' . $userName);
-    $users->clean();
-    $rooms->clean();
+    if ($userName !== false) {
+        $roomName = $rooms->findByUsername($userName);
+        $users->removeByConnection($connection);
+        $rooms->removeByUsername($userName);
+        $userNames = $rooms->getUsers($roomName);
+        $connections = $users->getConnectionsByUsernames($userNames);
+        $disconnectedUserNames = $rooms->clean($roomName);
+        if (count($disconnectedUserNames) > 0) { // the room is removed, all users must be disconnected
+            foreach ($disconnectedUserNames as $disconnectedUserName) {
+                $users->removeByUsername($disconnectedUserName);
+            }
+        } else {
+            $disconnectedUserNames = $users->clean($userNames);
+            foreach ($disconnectedUserNames as $disconnectedUserName) {
+                $rooms->removeByUsername($disconnectedUserName);
+            }
+        }
+        $userNames = $rooms->getUsers($roomName);
+        array_unshift($disconnectedUserNames, $userName);
+        Send::system($connections, [
+            'disconnected_users' => $disconnectedUserNames,
+            'room_users' => $userNames,
+            'room_timeout' => $rooms->getRoomTimeout($roomName),
+        ]);
+    }
 };
 
 $websocket->onMessage = function ($connection, $data) use ($users, $rooms) {
@@ -61,26 +92,27 @@ $websocket->onMessage = function ($connection, $data) use ($users, $rooms) {
         $userName = $users->findByConnection($connection);
         $roomName = $rooms->findByUsername($userName);
         if (!empty($messageData)) { // do not allow users to post to another rooms
-            $connections = $users->getConnectionsByUsernames($rooms->getUsers($roomName));
+            $userNames = $rooms->getUsers($roomName);
+            $connections = $users->getConnectionsByUsernames($userNames);
             switch ($messageData['type']) {
                 case 'text':
-                    Send::text($userName, $connections, $roomName, $messageData['text']);
+                    Send::text($userName, $connections, $messageData['text']);
                     break;
                 case 'system':
-                    switch ($messageData['text']) {
+                    switch ($messageData['method']) {
                         case 'keepalive':
-                            // TODO: Send chat data here
-                            Send::keepalive($userName, $connections, $roomName, '' . $userName);
+                            Send::system([$connection], [
+                                'keepalive' => time(),
+                                'room_users' => $userNames,
+                                'room_timeout' => $rooms->getRoomTimeout($roomName)
+                            ]);
                             break;
-                        case 'disconnect':
-                            $users->removeByConnection($connection);
-                            $rooms->removeByUsername($userName);
-                            Send::service($userName, $connections, $roomName, 'Disconnected user: ' . $userName);
+                        case 'color':
+                            Send::system($connections, [
+                                'user_color' => ['user' => $userName, 'color' => $messageData['color']],
+                            ]);
                             break;
                     }
-                    break;
-                case 'color':
-                    Send::color($userName, $connections, $roomName, $messageData['text']);
                     break;
                 default:
                     break;

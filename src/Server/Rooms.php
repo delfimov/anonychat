@@ -23,14 +23,24 @@ class Rooms
         return $this->rooms;
     }
 
+    public function getRoomTimeout($roomName)
+    {
+        if (isset($this->timeOutStorage[$roomName])) {
+            return time() - $this->timeOutStorage[$roomName] - self::TIMEOUT;
+        } else {
+            return 0;
+        }
+    }
+
     public function removeByUsername($userName)
     {
         $roomName = $this->findByUsername($userName);
         if (!empty($roomName)) {
             $index = array_search($userName, $this->rooms[$roomName]);
             unset($this->rooms[$roomName][$index]);
-            if (empty($this->rooms[$roomName]) == 0) {
+            if (count($this->rooms[$roomName]) == 0) {
                 unset($this->rooms[$roomName]);
+                unset($this->timeOutStorage[$roomName]);
             }
         }
     }
@@ -45,18 +55,20 @@ class Rooms
         return null;
     }
 
-    public function getUsers($roomName)
+    public function getUsers($roomName): array
     {
         return $this->rooms[$roomName] ?? [];
     }
 
-    public function clean()
+    public function clean($roomName): array
     {
-        foreach ($this->timeOutStorage as $roomName => $time) {
-            if ($time + self::TIMEOUT > time()) {
-                unset($this->timeOutStorage[$roomName]);
-                unset($this->rooms[$roomName]);
-            }
+        $cleanUsers = [];
+        $time = $this->timeOutStorage[$roomName] ?? 0;
+        if ($time + self::TIMEOUT < time()) {
+            $cleanUsers = $this->rooms[$roomName] ?? [];
+            unset($this->timeOutStorage[$roomName]);
+            unset($this->rooms[$roomName]);
         }
+        return $cleanUsers;
     }
 }

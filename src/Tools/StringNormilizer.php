@@ -7,22 +7,22 @@ class StringNormilizer
 
     public static function name($userName)
     {
-        return preg_replace("/[^a-zA-ZА-Яа-яёЁ0-9-_\.]/i", "_", $userName);
+        return preg_replace("/[^a-zA-ZА-Яа-яёЁ0-9-_\.]/ui", "_", $userName);
     }
 
     public static function room($string)
     {
-        return preg_replace("/[^a-zA-ZА-Яа-яёЁ0-9-_\.\/]/i", "_", $string);
+        return preg_replace("/[^a-zA-ZА-Яа-яёЁ0-9-_\.\/]/ui", "_", $string);
     }
 
     public static function type($string)
     {
-        return preg_replace("/[^a-z]/", "", $string);
+        return preg_replace("/[^a-z]/u", "", $string);
     }
 
     public static function hexcolor($string)
     {
-        $string = preg_replace("/[^a-fA-F0-9]/", "", $string);
+        $string = preg_replace("/[^a-fA-F0-9]/u", "", $string);
         if (strlen($string) > 6) {
             $string = substr($string, 0, 6);
         }

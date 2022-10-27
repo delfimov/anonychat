@@ -6,4 +6,5 @@ return [
     'port' => '9889',
     'server' => 'localhost',
     'max_message_length' => 4096,
+    'protocol' => 'wss', // wss or ws - wss is secure, ws is not
 ];
