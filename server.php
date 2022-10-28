@@ -16,8 +16,6 @@ use AnonyChat\Server\DecodeData;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$users = [];
-
 $config = require_once __DIR__ . '/config/config.php';
 
 if ($config['protocol'] == 'wss') {
