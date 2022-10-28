@@ -9,7 +9,7 @@ class Rooms
 
     const TIMEOUT = 7200;
 
-    public function add($userName, $roomName): void
+    public function add(string $userName, string $roomName): void
     {
         if (!isset($this->rooms[$roomName])) {
             $this->rooms[$roomName] = [];
@@ -18,12 +18,17 @@ class Rooms
         $this->rooms[$roomName][] = $userName;
     }
 
-    public function getRooms(): array
+    public function get(string $roomName) // : array|null // this is not a PSR-11 container, so we won't throw exception if the entry wasn't found
     {
-        return $this->rooms;
+        return $this->rooms[$roomName] ?? null;
     }
 
-    public function getRoomTimeout($roomName)
+    public function has(string $roomName): bool
+    {
+        return isset($this->rooms[$roomName]);
+    }
+
+    public function getRoomTimeout(string $roomName): int
     {
         if (isset($this->timeOutStorage[$roomName])) {
             return time() - $this->timeOutStorage[$roomName] - self::TIMEOUT;
@@ -32,7 +37,7 @@ class Rooms
         }
     }
 
-    public function removeByUsername($userName)
+    public function removeByUsername(string $userName): void
     {
         $roomName = $this->findByUsername($userName);
         if (!empty($roomName)) {
@@ -45,7 +50,7 @@ class Rooms
         }
     }
 
-    public function findByUsername($userName)
+    public function findByUsername(string $userName) // : string|null
     {
         foreach ($this->rooms as $roomName => $userNames) {
             if (in_array($userName, $userNames)) {
@@ -55,12 +60,12 @@ class Rooms
         return null;
     }
 
-    public function getUsers($roomName): array
+    public function getUsers(string $roomName): array
     {
         return $this->rooms[$roomName] ?? [];
     }
 
-    public function clean($roomName): array
+    public function clean(string $roomName): array
     {
         $cleanUsers = [];
         $time = $this->timeOutStorage[$roomName] ?? 0;

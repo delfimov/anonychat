@@ -2,11 +2,11 @@
 
 namespace AnonyChat\Server;
 
-use AnonyChat\Tools\StringNormilizer;
+use AnonyChat\Tools\StringNormalizer;
 
 class DecodeData
 {
-    public static function decode($data)
+    public static function decode(string $data): array
     {
         if (!empty($data)) {
             $data = json_decode($data, true);
@@ -16,12 +16,13 @@ class DecodeData
                 && !empty($data['room'])
                 && !empty($data['text'])
             ) {
-                $data['room'] = StringNormilizer::room($data['room']);
-                $data['type'] = StringNormilizer::type($data['type']);
-                $data['text'] = StringNormilizer::text($data['text']);
+                $data['room'] = StringNormalizer::room($data['room']);
+                $data['type'] = StringNormalizer::type($data['type']);
+                $data['text'] = StringNormalizer::text($data['text']);
             }
+            return $data;
         }
-        return $data;
+        return [];
     }
 
 }

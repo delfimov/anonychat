@@ -1,12 +1,12 @@
 <?php
 
 use Workerman\Worker;
-use AnonyChat\Tools\StringNormilizer;
+use Workerman\Connection\ConnectionInterface;
+use AnonyChat\Tools\StringNormalizer;
 use AnonyChat\Server\Send;
 use AnonyChat\Server\Users;
 use AnonyChat\Server\Rooms;
 use AnonyChat\Server\DecodeData;
-use AnonyChat\Server\Clean;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -27,17 +27,18 @@ if ($config['protocol'] == 'wss') {
 } else {
     $websocket = new Worker('websocket://' . $config['server_name'] . ':' . $config['port']);
 }
+
 $users = new Users();
 $rooms = new Rooms();
 
-$websocket->onConnect = function($connection) use ($users, $rooms)
+$websocket->onConnect = function(ConnectionInterface $connection) use ($users, $rooms)
 {
-    $connection->onWebSocketConnect = function($connection) use ($users, $rooms)
+    $connection->onWebSocketConnect = function(ConnectionInterface $connection) use ($users, $rooms)
     {
-        $userName = StringNormilizer::name($_GET['user'] ?? 'user_' . bin2hex(random_bytes(10)));
-        $roomName = StringNormilizer::room($_GET['room'] ?? '/');
-        $color = StringNormilizer::hexcolor($_GET['color'] ?? '#000000');
-        $users->add($connection, $userName);
+        $userName = StringNormalizer::name($_GET['user'] ?? 'user_' . bin2hex(random_bytes(10)));
+        $roomName = StringNormalizer::room($_GET['room'] ?? '/');
+        $color = StringNormalizer::hexcolor($_GET['color'] ?? '#000000');
+        $userName = $users->add($connection, $userName);
         $rooms->add($userName, $roomName);
         $rooms->getRoomTimeout($roomName);
         $userNames = $rooms->getUsers($roomName);
@@ -56,7 +57,7 @@ $websocket->onConnect = function($connection) use ($users, $rooms)
     };
 };
 
-$websocket->onClose = function($connection) use ($users, $rooms)
+$websocket->onClose = function(ConnectionInterface $connection) use ($users, $rooms)
 {
     $userName = $users->findByConnection($connection);
     if ($userName !== false) {
@@ -86,12 +87,12 @@ $websocket->onClose = function($connection) use ($users, $rooms)
     }
 };
 
-$websocket->onMessage = function ($connection, $data) use ($users, $rooms) {
+$websocket->onMessage = function (ConnectionInterface $connection, $data) use ($users, $rooms) {
     if (!empty($data)) {
         $messageData = DecodeData::decode($data);
         $userName = $users->findByConnection($connection);
         $roomName = $rooms->findByUsername($userName);
-        if (!empty($messageData)) { // do not allow users to post to another rooms
+        if (isset($messageData['type'])) { // do not allow users to post to another rooms
             $userNames = $rooms->getUsers($roomName);
             $connections = $users->getConnectionsByUsernames($userNames);
             switch ($messageData['type']) {
