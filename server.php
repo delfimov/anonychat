@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * AnonyChat WebSocket server.
+ */
+
+declare(strict_types=1);
+
 use Workerman\Worker;
 use Workerman\Connection\ConnectionInterface;
 use AnonyChat\Tools\StringNormalizer;

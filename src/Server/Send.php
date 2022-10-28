@@ -1,13 +1,13 @@
 <?php
 
-namespace AnonyChat\Server;
+declare(strict_types=1);
 
-use \Workerman\Connection\ConnectionInterface;
+namespace AnonyChat\Server;
 
 class Send
 {
     /**
-     * @param array $userConnections
+     * @param array $userConnections array of \Workerman\Connection\ConnectionInterface
      * @param mixed $data
      * @return void
      */
@@ -24,11 +24,11 @@ class Send
 
     /**
      * @param string $userName
-     * @param ConnectionInterface $userConnections
+     * @param array $userConnections array of \Workerman\Connection\ConnectionInterface
      * @param string $text
      * @return void
      */
-    public static function text(string $userName, ConnectionInterface $userConnections, string $text)
+    public static function text(string $userName, array $userConnections, string $text)
     {
         foreach ($userConnections as $connectionUserName => $userConnection) {
             $dataSend = json_encode([
